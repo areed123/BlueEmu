@@ -26,7 +26,7 @@ uint8_t clock_pulse = 1;
 void emulate_Cycle();
 void process_tick(uint8_t tick);
 uint8_t get_instruction();
-void do_HLT(uint8_t tick){ }
+void do_HLT(uint8_t tick){}
 void do_ADD(uint8_t tick){}
 void do_XOR(uint8_t tick){}
 void do_AND(uint8_t tick){}
@@ -34,8 +34,33 @@ void do_IOR(uint8_t tick){}
 void do_NOT(uint8_t tick){}
 void do_LDA(uint8_t tick){}
 void do_STA(uint8_t tick){}
-void do_SRJ(uint8_t tick){}
-void do_JMA(uint8_t tick){}
+void do_SRJ(uint8_t tick){
+	if(tick == 6){
+		ACC = ACC | ( PC & 0x0FFF);
+	}
+	else if (tick == 7){
+		PC = 0x0000;
+	}
+	else if (tick == 8){
+		MAR = (IR & 0x0FFF);
+		PC = (IR & 0x0FFF);
+	}
+}
+void do_JMA(uint8_t tick){
+	if(tick == 6){
+		if(ACC >> 15){
+			PC = 0x0000;
+		}
+	}
+	else if (tick == 7){
+		if(ACC >> 15){
+			PC = (IR & 0x0FFF);
+		}
+	}
+	else if (tick = 8){
+		MAR = PC;
+	}
+}
 void do_JMP(uint8_t tick){
 	if(tick == 6){
 		PC = 0x0000;
@@ -50,7 +75,17 @@ void do_JMP(uint8_t tick){
 void do_INP(uint8_t tick){}
 void do_OUT(uint8_t tick){}
 void do_RAL(uint8_t tick){}
-void do_CSA(uint8_t tick){}
+void do_CSA(uint8_t tick){
+	if(tick == 6){
+		ACC=0x0000;
+	}
+	else if(tick == 7){
+		ACC = SR;
+	}
+	else if(tick ==8){
+		MAR = PC;
+	}
+}
 
 void do_NOP(uint8_t tick){
 	if(tick == 8)
@@ -134,8 +169,9 @@ void dumpRegs()
 
 void runProgram(const uint16_t* program){
 	std::cout << "Copying program to ram\n";
+	
 	memset(ram, 0x00, RAMLENGTH * sizeof(uint16_t));
-	memmove(ram,program, (sizeof(program)*sizeof(uint16_t)));
+	memmove(ram,program, (sizeof(program)));
 	for (;;){
 		emulate_Cycle();
 		dumpRegs();
@@ -153,6 +189,10 @@ uint16_t program0[6] = {
 	0xA000	// JUMP to instruction #0
 		
 };
+uint16_t program1[2]{
+	0xF000,
+	0x8003, //SRJ to insturction #4
+}
 
 int main(int argc, char* argv[])
 {

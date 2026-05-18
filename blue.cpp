@@ -6,6 +6,9 @@
 #include <iostream>
 #include <vector>
 #define RAMLENGTH 4096
+
+//TODO TEST ADD XOR AND IOR AND RAL
+//IMPLEMENT UNDER AND OVERFLOW CHECKING FOR ADD
 uint16_t ram[RAMLENGTH];	//4096 words of ram 16 bits per word
 
 typedef uint16_t bluereg;
@@ -22,11 +25,19 @@ bluereg DSL;	//Device selection register
 
 typedef enum{FETCH,EXECUTE,} State;
 State STATE = FETCH;
+bool power = true;
 uint8_t clock_pulse = 1;
 void emulate_Cycle();
 void process_tick(uint8_t tick);
 uint8_t get_instruction();
-void do_HLT(uint8_t tick){}
+void do_HLT(uint8_t tick){
+	if(tick == 7){
+		power = false;
+	}
+	else if(tick == 8){
+		MAR = PC;
+	}	
+}
 void do_ADD(uint8_t tick){
 	if(STATE == FETCH){
                 if(tick == 6){
@@ -36,6 +47,7 @@ void do_ADD(uint8_t tick){
                         Z = ACC;
                 }
                 else if(tick == 8){
+			MAR = (IR & 0x0FFF);
                         STATE = EXECUTE;
                 }
         }
@@ -47,19 +59,129 @@ void do_ADD(uint8_t tick){
                         ACC= 0x0000;
 			MBR = 0x0000;
                 }
+		else if(tick == 3){
+			MBR = ram[MAR];
+			
+		}
                 else if(tick == 7){
-                        ACC = ;
+		//Check for over and underflows
+                        ACC = Z+MBR;
                         
                 }
 		else if(tick == 8){
-
+			MAR = PC;
+			STATE = FETCH;
 		}
         }
 
 }
-void do_XOR(uint8_t tick){}
-void do_AND(uint8_t tick){}
-void do_IOR(uint8_t tick){}
+void do_XOR(uint8_t tick){
+	if(STATE == FETCH){
+		if(tick == 6){
+			Z=0x0000;
+		}
+		else if(tick == 7)
+		{
+			Z = ACC;
+		}
+		else if(tick == 8){
+			MAR = IR & 0x0FFF;
+			STATE = EXECUTE;
+		}
+	}
+	else if(STATE == EXECUTE){
+		if(tick == 1){
+                	//Initiate Read
+                }
+		else if (tick == 2){
+			ACC = 0x0000;
+			MBR = 0x0000;
+		}
+		else if (tick == 3){
+			MBR = ram[MAR];
+		}
+                else if(tick == 7)
+                {
+                	ACC = Z^MBR;
+                }
+                else if(tick == 8){
+                	MAR = PC;
+			STATE = FETCH;
+                }
+	}
+}
+void do_AND(uint8_t tick){
+	 if(STATE == FETCH){
+                if(tick == 6){
+                        Z=0x0000;
+                }
+                else if(tick == 7)
+                {
+                        Z = ACC;
+                }
+                else if(tick == 8){
+                        MAR = IR & 0x0FFF;
+                        STATE = EXECUTE;
+                }
+        }
+        else if(STATE == EXECUTE){
+                if(tick == 1){
+                        //Initiate Read
+                }
+                else if (tick == 2){
+                        ACC = 0x0000;
+                        MBR = 0x0000;
+                }
+                else if (tick == 3){
+                        MBR = ram[MAR];
+                }
+                else if(tick == 7)
+                {
+                        ACC = Z&MBR;
+                }
+                else if(tick == 8){
+                        MAR = PC;
+                        STATE = FETCH;
+                }
+        }
+
+}
+void do_IOR(uint8_t tick){
+	 if(STATE == FETCH){
+                if(tick == 6){
+                        Z=0x0000;
+                }
+                else if(tick == 7)
+                {
+                        Z = ACC;
+                }
+                else if(tick == 8){
+                        MAR = IR & 0x0FFF;
+                        STATE = EXECUTE;
+                }
+        }
+        else if(STATE == EXECUTE){
+                if(tick == 1){
+                        //Initiate Read
+                }
+                else if (tick == 2){
+                        ACC = 0x0000;
+                        MBR = 0x0000;
+                }
+                else if (tick == 3){
+                        MBR = ram[MAR];
+                }
+                else if(tick == 7)
+                {
+                        ACC = Z|MBR;
+                }
+                else if(tick == 8){
+                        MAR = PC;
+                        STATE = FETCH;
+                }
+        }
+
+}
 void do_NOT(uint8_t tick){}
 void do_LDA(uint8_t tick){}
 void do_STA(uint8_t tick){}
@@ -120,7 +242,7 @@ void do_RAL(uint8_t tick){
 			ACC = 0x0000;
 		}
 		else if(tick == 2){
-			ACC = Z*2;
+			ACC = ((Z & 0x8000)  >> 15) | Z*2;	//rotation is not a left shift
 		}
 		else if(tick == 8){
 			MAR = PC;
@@ -224,8 +346,8 @@ void runProgram(const uint16_t* program){
 	std::cout << "Copying program to ramADASLKJDLLS\n";
 	
 	memset(ram, 0x00, RAMLENGTH * sizeof(uint16_t));
-	memmove(ram,program, RAMLENGTH * sizeof(uint16_t));
-	for (;;){
+	memmove(ram,program,  5*sizeof(uint16_t));
+	for (;power;){
 		emulate_Cycle();
 		dumpRegs();
 	}
@@ -252,9 +374,17 @@ uint16_t program1[8]{
 	0x9000, //JMA to instruction #0
 	0xA000	//JMP to instruction #0
 };
+uint16_t program2[5]{
+	0x1004,
+	0xF005,
+	0xF004,
+	0xD123,
+	0x0005	
+
+};
 
 int main(int argc, char* argv[])
 {
-	runProgram(program1);
+	runProgram(program2);
 	return 0;
 }

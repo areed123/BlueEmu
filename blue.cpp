@@ -27,7 +27,36 @@ void emulate_Cycle();
 void process_tick(uint8_t tick);
 uint8_t get_instruction();
 void do_HLT(uint8_t tick){}
-void do_ADD(uint8_t tick){}
+void do_ADD(uint8_t tick){
+	if(STATE == FETCH){
+                if(tick == 6){
+                        Z = 0x0000;
+                }
+                else if(tick == 7){
+                        Z = ACC;
+                }
+                else if(tick == 8){
+                        STATE = EXECUTE;
+                }
+        }
+        else if(STATE == EXECUTE){
+                if(tick == 1){
+                        //Initiate Read
+                }
+                else if(tick == 2){
+                        ACC= 0x0000;
+			MBR = 0x0000;
+                }
+                else if(tick == 7){
+                        ACC = ;
+                        
+                }
+		else if(tick == 8){
+
+		}
+        }
+
+}
 void do_XOR(uint8_t tick){}
 void do_AND(uint8_t tick){}
 void do_IOR(uint8_t tick){}
@@ -36,7 +65,7 @@ void do_LDA(uint8_t tick){}
 void do_STA(uint8_t tick){}
 void do_SRJ(uint8_t tick){
 	if(tick == 6){
-		ACC = ACC | ( PC & 0x0FFF);
+		ACC = (ACC | ( PC & 0x0FFF));
 	}
 	else if (tick == 7){
 		PC = 0x0000;
@@ -57,7 +86,7 @@ void do_JMA(uint8_t tick){
 			PC = (IR & 0x0FFF);
 		}
 	}
-	else if (tick = 8){
+	else if (tick == 8){
 		MAR = PC;
 	}
 }
@@ -74,7 +103,31 @@ void do_JMP(uint8_t tick){
 }
 void do_INP(uint8_t tick){}
 void do_OUT(uint8_t tick){}
-void do_RAL(uint8_t tick){}
+void do_RAL(uint8_t tick){
+	if(STATE == FETCH){
+		if(tick == 6){
+			Z = 0x0000;
+		}
+		else if(tick == 7){
+			Z = ACC;
+		}
+		else if(tick == 8){
+			STATE = EXECUTE;
+		}
+	}
+	else if(STATE == EXECUTE){
+		if(tick == 1){
+			ACC = 0x0000;
+		}
+		else if(tick == 2){
+			ACC = Z*2;
+		}
+		else if(tick == 8){
+			MAR = PC;
+			STATE = FETCH;
+		}
+	}
+}
 void do_CSA(uint8_t tick){
 	if(tick == 6){
 		ACC=0x0000;
@@ -168,10 +221,10 @@ void dumpRegs()
 }
 
 void runProgram(const uint16_t* program){
-	std::cout << "Copying program to ram\n";
+	std::cout << "Copying program to ramADASLKJDLLS\n";
 	
 	memset(ram, 0x00, RAMLENGTH * sizeof(uint16_t));
-	memmove(ram,program, (sizeof(program)));
+	memmove(ram,program, RAMLENGTH * sizeof(uint16_t));
 	for (;;){
 		emulate_Cycle();
 		dumpRegs();
@@ -189,13 +242,19 @@ uint16_t program0[6] = {
 	0xA000	// JUMP to instruction #0
 		
 };
-uint16_t program1[2]{
+uint16_t program1[8]{
 	0xF000,
-	0x8003, //SRJ to insturction #4
-}
+	0xA004,	//Jumping instruction to instruction #4
+	0xF007,
+	0xF008,
+	0xF010,
+	0xD000,	//RAL left shift
+	0x9000, //JMA to instruction #0
+	0xA000	//JMP to instruction #0
+};
 
 int main(int argc, char* argv[])
 {
-	runProgram(program0);
+	runProgram(program1);
 	return 0;
 }

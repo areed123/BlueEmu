@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string.h>
 #include <string>
-
+#include <fstream>
 #include <iostream>
 #include <vector>
 #define RAMLENGTH 4096
@@ -342,11 +342,11 @@ void dumpRegs()
 	printf("PC: %04x, A %04x, IR: %04x, Z: %04x, MAR: %04x, MBR: %04x, DSL: %02x, DIT: %02x, DOT: %02x\n", PC,ACC,IR,Z,MAR,MBR,(DSL & 0x00FF),(DIT & 0x00FF),(DOT & 0x00FF));
 }
 
-void runProgram(const uint16_t* program){
+void runProgram(const uint16_t* program,int lineCount){
 	std::cout << "Copying program to ramADASLKJDLLS\n";
 	
 	memset(ram, 0x00, RAMLENGTH * sizeof(uint16_t));
-	memmove(ram,program,  5*sizeof(uint16_t));
+	memmove(ram,program,  lineCount*sizeof(uint16_t));
 	for (;power;){
 		emulate_Cycle();
 		dumpRegs();
@@ -384,7 +384,32 @@ uint16_t program2[5]{
 };
 
 int main(int argc, char* argv[])
-{
-	runProgram(program2);
+{	
+	uint16_t *prog;
+	int lineCount;
+	if(argc > 1){
+		std::cout << "OPENING FILE "<<argv[1]<<'\n';
+		std::ifstream program(argv[1]);
+		std::string line;
+		lineCount = 0;
+		while(getline(program, line)){
+			lineCount++;
+		}
+		prog = new uint16_t(lineCount);
+		program.clear();
+		program.seekg(0,std::ifstream::beg);
+		std::cout << "LINE COUNT "<<lineCount<<'\n';
+		int i = 0;
+		while(getline(program, line)){
+			prog[i]=static_cast<uint16_t>(std::stoi(line,nullptr,16));
+			std::cout << "LINE NO. "<< i << " INSTRUCTION: "<< prog[i]<< '\n';
+			i++;
+		}
+		
+	}
+	if(!prog){
+		std::cout << "ERROR INVALID PROGRAM";
+	}
+	runProgram(prog,lineCount);
 	return 0;
 }

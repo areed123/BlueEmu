@@ -387,7 +387,7 @@ int main(int argc, char* argv[])
 {	
 	uint16_t *prog;
 	int lineCount;
-	if(argc > 1){
+	if(argc == 2){
 		std::cout << "OPENING FILE "<<argv[1]<<'\n';
 		std::ifstream program(argv[1]);
 		std::string line;
@@ -395,21 +395,26 @@ int main(int argc, char* argv[])
 		while(getline(program, line)){
 			lineCount++;
 		}
-		prog = new uint16_t(lineCount);
-		program.clear();
-		program.seekg(0,std::ifstream::beg);
-		std::cout << "LINE COUNT "<<lineCount<<'\n';
-		int i = 0;
-		while(getline(program, line)){
-			prog[i]=static_cast<uint16_t>(std::stoi(line,nullptr,16));
-			std::cout << "LINE NO. "<< i << " INSTRUCTION: "<< prog[i]<< '\n';
-			i++;
+		if(lineCount != 0){
+			prog = new uint16_t(lineCount);
+			program.clear();
+			program.seekg(0,std::ifstream::beg);
+			std::cout << "LINE COUNT "<<lineCount<<'\n';
+			int i = 0;
+			while(getline(program, line)){
+				prog[i]=static_cast<uint16_t>(std::stoi(line,nullptr,16));
+				std::cout << "LINE NO. "<< i << " INSTRUCTION: "<< prog[i]<< '\n';
+				i++;
+			}
+			runProgram(prog,lineCount);
+		}
+		else{
+			std::cout << "File is empty or doesn't exist\n";
 		}
 		
 	}
-	if(!prog){
-		std::cout << "ERROR INVALID PROGRAM";
+	else{
+		std::cout << "Please use form ./[executable] [path to program]\n";
 	}
-	runProgram(prog,lineCount);
 	return 0;
 }

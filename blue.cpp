@@ -33,6 +33,44 @@ uint8_t clock_pulse = 1;
 void emulate_Cycle();
 void process_tick(uint8_t tick);
 uint8_t get_instruction();
+
+enum {
+        HLT,
+        ADD,
+        XOR,
+        AND,
+        IOR,
+        NOT,
+        LDA,
+        STA,
+        SRJ,
+        JMA,
+        JMP,
+        INP,
+        OUT,
+        RAL,
+        CSA,
+        NOP,
+
+};
+std::string instStrs[16] = {
+	"HLT",
+        "ADD",
+        "XOR",
+        "AND",
+        "IOR",
+        "NOT",
+        "LDA",
+        "STA",
+        "SRJ",
+        "JMA",
+        "JMP",
+        "INP",
+        "OUT",
+        "RAL",
+        "CSA",
+        "NOP"
+};
 void do_HLT(uint8_t tick){
 	if(tick == 7){
 		power = false;
@@ -245,7 +283,7 @@ void do_STA(uint8_t tick){
                 }
         }
         else if(STATE == EXECUTE){
-                else if(tick == 4){
+                if(tick == 4){
                         MBR = 0x0000; //AND with 0
                 }
                 else if(tick == 5){
@@ -481,9 +519,37 @@ void dumpRegs()
 void blueDebug(){
 	
 }
-
+void doIO(){
+	uint8_t instr;
+	instr = get_instruction();
+	if(TRA){
+		if(instr == INP){
+			//FOR NOW: TAKE INPUT FROM std::in
+			//FOR LATER: implement input class so that the emulator may use multiple inputs
+			std::string input;
+			try{
+				std::cin >> input;
+				DIT = std::stoi(input, nullptr, 16);
+				R = 1;
+			}
+			catch(...){
+				std::cerr << "INVALID INPUT";
+			}	
+		}
+		else if(instr == OUT){
+			std::cout << DOT << "\n";
+			R = 1;
+		}
+		else{
+			R = 0;
+		}
+	}
+	else{
+		R = 0;
+	}
+}
 void runProgram(const uint16_t* program,int lineCount){
-	std::cout << "Copying program to ramADASLKJDLLS\n";
+	std::cout << "Copying program to ram\n";
 	
 	memset(ram, 0x00, RAMLENGTH * sizeof(uint16_t));
 	memmove(ram,program,  lineCount*sizeof(uint16_t));
@@ -491,6 +557,7 @@ void runProgram(const uint16_t* program,int lineCount){
 		emulate_Cycle();
 		blueDebug();
 		dumpRegs();
+		doIO();
 	}
 
 }
@@ -544,7 +611,7 @@ int main(int argc, char* argv[])
 			int i = 0;
 			while(getline(program, line)){
 				prog[i]=static_cast<uint16_t>(std::stoi(line,nullptr,16));
-				std::cout << "LINE NO. "<< i << " INSTRUCTION: "<< prog[i]<< '\n';
+				std::cout << "LINE NO. "<< i << " INSTRUCTION: "<< std::hex << prog[i]<<" :: "<< instStrs[prog[i]>>12]<<'\n';
 				i++;
 			}
 			runProgram(prog,lineCount);
@@ -557,5 +624,6 @@ int main(int argc, char* argv[])
 	else{
 		std::cout << "Please use form ./[executable] [path to program]\n";
 	}
+	delete prog;
 	return 0;
 }

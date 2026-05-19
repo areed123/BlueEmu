@@ -1,7 +1,7 @@
 # Welcome
-This is my BlueEmu project which is a software emulator for the computer specification called Blue from Caxton C. Foster's Computer Architecture
-Credit goes to Gecko05's blog post at https://gecko05.github.io/2022/10/22/first-emulator-part1.html introducing me to Blue and being the initial starting point for this project
-BlueEmu is written in C++ and its purpose is to emulate the behavior of Blue and implement its entire instruction set as shown below
+This is my BlueEmu project which is a software emulator for the computer specification called Blue from Caxton C. Foster's Computer Architecture.  
+Credit goes to Gecko05's blog post at https://gecko05.github.io/2022/10/22/first-emulator-part1.html introducing me to Blue and being the initial starting point for this project.  
+BlueEmu is written in C++ and its purpose is to emulate the behavior of Blue and implement its entire instruction set as shown below.  
 
 ## Instructions
 The emulator takes a filepath to a file containing code for Blue to execute as a command line argument in the form ./[BlueEmu] [filePath to Source]

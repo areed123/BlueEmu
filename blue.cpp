@@ -7,7 +7,7 @@
 #include <vector>
 #define RAMLENGTH 4096
 
-//TODO TEST ADD XOR AND IOR AND RAL
+//TODO TEST TEST TEST TEST
 //IMPLEMENT UNDER AND OVERFLOW CHECKING FOR ADD
 uint16_t ram[RAMLENGTH];	//4096 words of ram 16 bits per word
 
@@ -23,6 +23,9 @@ bluereg Z;	//Z register - auxillary register for calculations
 bluereg SR;	//Console switch register for inputting data manually
 bluereg DSL;	//Device selection register
 
+//FOR IO
+bool TRA;
+bool R;
 typedef enum{FETCH,EXECUTE,} State;
 State STATE = FETCH;
 bool power = true;
@@ -30,6 +33,44 @@ uint8_t clock_pulse = 1;
 void emulate_Cycle();
 void process_tick(uint8_t tick);
 uint8_t get_instruction();
+
+enum {
+        HLT,
+        ADD,
+        XOR,
+        AND,
+        IOR,
+        NOT,
+        LDA,
+        STA,
+        SRJ,
+        JMA,
+        JMP,
+        INP,
+        OUT,
+        RAL,
+        CSA,
+        NOP,
+
+};
+std::string instStrs[16] = {
+	"HLT",
+        "ADD",
+        "XOR",
+        "AND",
+        "IOR",
+        "NOT",
+        "LDA",
+        "STA",
+        "SRJ",
+        "JMA",
+        "JMP",
+        "INP",
+        "OUT",
+        "RAL",
+        "CSA",
+        "NOP"
+};
 void do_HLT(uint8_t tick){
 	if(tick == 7){
 		power = false;
@@ -182,9 +223,82 @@ void do_IOR(uint8_t tick){
         }
 
 }
-void do_NOT(uint8_t tick){}
-void do_LDA(uint8_t tick){}
-void do_STA(uint8_t tick){}
+void do_NOT(uint8_t tick){
+	if(STATE == FETCH){
+		if(tick == 6){
+			Z = 0x0000;
+		}
+		else if(tick == 7){
+			Z = ACC;
+		}
+		else if(tick == 8){
+			STATE = EXECUTE;
+		}
+	}
+	else if(STATE == EXECUTE){
+		if(tick == 1){
+			ACC = 0x0000;
+		}
+		else if(tick == 2){
+			ACC = ~Z;
+		}
+		else if(tick == 8){
+			MAR = PC;
+			STATE = FETCH;
+		}
+	}
+
+}
+void do_LDA(uint8_t tick){
+	if(STATE == FETCH){
+		if(tick == 8){
+			STATE = EXECUTE;
+			MAR = (IR & 0x0FFF);
+		}
+	}
+	else if(STATE == EXECUTE){
+		if(tick == 2){
+			ACC=0x0000; //AND with 0
+		}
+		else if(tick == 3){
+			MBR = 0x0000; //AND with 0
+		}
+		else if(tick == 4){
+			MBR = ram[MAR]; //OR with word at MAR
+		}
+		else if(tick == 5){
+			ACC = MBR;	//OR with MBR
+		}
+		else if(tick == 8){
+			STATE=FETCH;
+			MAR = PC;
+		}
+	}
+}
+void do_STA(uint8_t tick){
+	if(STATE == FETCH){
+                if(tick == 8){
+                        STATE = EXECUTE;
+                        MAR = (IR & 0x0FFF);
+                }
+        }
+        else if(STATE == EXECUTE){
+                if(tick == 4){
+                        MBR = 0x0000; //AND with 0
+                }
+                else if(tick == 5){
+                        MBR = ACC; //OR with word at MAR
+                }
+                else if(tick == 6){
+                        ram[MAR] = MBR;      //OR with MBR
+                }
+                else if(tick == 8){
+                        STATE=FETCH;
+                        MAR = PC;
+                }
+        }
+
+}
 void do_SRJ(uint8_t tick){
 	if(tick == 6){
 		ACC = (ACC | ( PC & 0x0FFF));
@@ -223,8 +337,69 @@ void do_JMP(uint8_t tick){
 		MAR=PC;
 	}
 }
-void do_INP(uint8_t tick){}
-void do_OUT(uint8_t tick){}
+void do_INP(uint8_t tick){
+	if(STATE == FETCH){
+		if(tick == 6){
+			ACC = 0x0000;
+			DSL = (IR & 0x003F);
+		}
+		if(tick == 7){
+			TRA = 0b1;
+		}
+		if(tick == 8){
+			STATE = EXECUTE;
+		}
+	}
+	else if (STATE == EXECUTE){
+		if(tick == 5){
+			if(R){
+				ACC = (DIT>>8)&0x00FF;
+			}
+		}
+		if(tick == 6){
+			if(R){
+				//UNBLOCK
+				TRA = 0b0;
+			}
+		}
+		if(tick == 8){
+			if(!TRA){//IF UNBLOCKED
+				STATE = FETCH;
+		       		MAR = PC;	
+			}
+		}
+	}
+	
+}
+void do_OUT(uint8_t tick){
+	if(STATE == FETCH){
+                if(tick == 6){
+                        DOT = ACC & 0xFF00;
+                        DSL = (IR & 0x003F);
+                }
+                if(tick == 7){
+                        TRA = 0b1;
+                }
+                if(tick == 8){
+                        STATE = EXECUTE;
+                }
+        }
+        else if (STATE == EXECUTE){
+                if(tick == 6){
+                        if(R){
+                                //UNBLOCK
+                                TRA = 0b0;
+                        }
+                }
+                if(tick == 8){
+                        if(!TRA){//IF UNBLOCKED
+                                STATE = FETCH;
+                                MAR = PC;
+                        }
+                }
+        }
+
+}
 void do_RAL(uint8_t tick){
 	if(STATE == FETCH){
 		if(tick == 6){
@@ -341,15 +516,48 @@ void dumpRegs()
 {
 	printf("PC: %04x, A %04x, IR: %04x, Z: %04x, MAR: %04x, MBR: %04x, DSL: %02x, DIT: %02x, DOT: %02x\n", PC,ACC,IR,Z,MAR,MBR,(DSL & 0x00FF),(DIT & 0x00FF),(DOT & 0x00FF));
 }
-
+void blueDebug(){
+	
+}
+void doIO(){
+	uint8_t instr;
+	instr = get_instruction();
+	if(TRA){
+		if(instr == INP){
+			//FOR NOW: TAKE INPUT FROM std::in
+			//FOR LATER: implement input class so that the emulator may use multiple inputs
+			std::string input;
+			try{
+				std::cin >> input;
+				DIT = std::stoi(input, nullptr, 16);
+				R = 1;
+			}
+			catch(...){
+				std::cerr << "INVALID INPUT";
+			}	
+		}
+		else if(instr == OUT){
+			std::cout << DOT << "\n";
+			R = 1;
+		}
+		else{
+			R = 0;
+		}
+	}
+	else{
+		R = 0;
+	}
+}
 void runProgram(const uint16_t* program,int lineCount){
-	std::cout << "Copying program to ramADASLKJDLLS\n";
+	std::cout << "Copying program to ram\n";
 	
 	memset(ram, 0x00, RAMLENGTH * sizeof(uint16_t));
 	memmove(ram,program,  lineCount*sizeof(uint16_t));
 	for (;power;){
 		emulate_Cycle();
+		blueDebug();
 		dumpRegs();
+		doIO();
 	}
 
 }
@@ -403,7 +611,7 @@ int main(int argc, char* argv[])
 			int i = 0;
 			while(getline(program, line)){
 				prog[i]=static_cast<uint16_t>(std::stoi(line,nullptr,16));
-				std::cout << "LINE NO. "<< i << " INSTRUCTION: "<< prog[i]<< '\n';
+				std::cout << "LINE NO. "<< i << " INSTRUCTION: "<< std::hex << prog[i]<<" :: "<< instStrs[prog[i]>>12]<<'\n';
 				i++;
 			}
 			runProgram(prog,lineCount);
@@ -416,5 +624,6 @@ int main(int argc, char* argv[])
 	else{
 		std::cout << "Please use form ./[executable] [path to program]\n";
 	}
+	delete prog;
 	return 0;
 }

@@ -29,6 +29,7 @@ bool R;
 typedef enum{FETCH,EXECUTE,} State;
 State STATE = FETCH;
 bool power = true;
+bool stop = false;
 uint8_t clock_pulse = 1;
 void emulate_Cycle();
 void process_tick(uint8_t tick);
@@ -106,8 +107,18 @@ void do_ADD(uint8_t tick){
 		}
                 else if(tick == 7){
 		//Check for over and underflows
-                        ACC = Z+MBR;
-                        
+			uint32_t result = Z+MBR;
+			if((Z & 0x8000) && (MBR & 0x8000) && !(result & 0x8000)){
+				power = false;
+				stop = true;
+			}
+			else if(!(Z & 0x8000) && !(MBR & 0x8000) && (result & 0x8000)){
+				power = false;
+				stop = true;
+			}
+			
+                        ACC = static_cast<uint16_t>(result);
+				
                 }
 		else if(tick == 8){
 			MAR = PC;
@@ -353,7 +364,7 @@ void do_INP(uint8_t tick){
 	else if (STATE == EXECUTE){
 		if(tick == 5){
 			if(R){
-				ACC = (DIT>>8)&0x00FF;
+				ACC = (DIT)&0x00FF;
 			}
 		}
 		if(tick == 6){
@@ -533,7 +544,7 @@ void doIO(){
 				R = 1;
 			}
 			catch(...){
-				std::cerr << "INVALID INPUT";
+				std::cerr << "INVALID INPUT\n";
 			}	
 		}
 		else if(instr == OUT){
